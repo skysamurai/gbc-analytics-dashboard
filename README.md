@@ -81,19 +81,13 @@ Next.js 14 использует ESM модули, а `ts-node` с ними не 
 ```
 В демо-аккаунте RetailCRM есть только тип `main`. Claude запросил список доступных типов через API и заменил значение в скрипте.
 
-**3. `curl` в PowerShell не отправляет заголовки:**
-```
-{"error":"Unauthorized"}
-```
-В Windows PowerShell `curl` — это псевдоним для `Invoke-WebRequest`, он игнорирует флаг `-H`. Решение: использовать `curl.exe` вместо `curl`.
-
-**4. Environment Variables не добавились на Vercel:**
+**3. Environment Variables не добавились на Vercel:**
 ```
 "Failed to parse URL from undefined/api/v5/orders"
 ```
 При деплое env vars нужно добавлять вручную в Settings → Environment Variables. После добавления — Redeploy.
 
-**5. Cron каждые 5 минут недоступен на бесплатном плане Vercel:**
+**4. Cron каждые 5 минут недоступен на бесплатном плане Vercel:**
 ```
 Hobby accounts are limited to daily cron jobs
 ```
