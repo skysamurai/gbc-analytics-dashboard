@@ -1,65 +1,88 @@
-import Image from "next/image";
+import { Suspense } from 'react'
+import { getOrders } from '@/lib/supabase'
+import { MetricsCards } from '@/components/MetricsCards'
+import { OrdersChart } from '@/components/OrdersChart'
+import { UtmBreakdown } from '@/components/UtmBreakdown'
+import { OrdersTable } from '@/components/OrdersTable'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 
-export default function Home() {
+const CITIES = ['Алматы', 'Астана', 'Шымкент', 'Актау']
+const UTMS = ['instagram', 'google', 'tiktok', 'direct', 'referral']
+
+interface PageProps {
+  searchParams: Promise<{ city?: string; utm?: string }>
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const orders = await getOrders({
+    city: params.city && params.city !== 'all' ? params.city : undefined,
+    utm_source: params.utm && params.utm !== 'all' ? params.utm : undefined,
+  })
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-bold">GBC Analytics Dashboard</h1>
+          <div className="flex gap-2">
+            <FilterSelect name="city" placeholder="Все города" options={CITIES} current={params.city} />
+            <FilterSelect name="utm" placeholder="Все источники" options={UTMS} current={params.utm} />
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Metrics */}
+        <MetricsCards orders={orders} />
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-lg border bg-white p-4">
+            <h2 className="mb-4 font-semibold">Заказы по датам</h2>
+            <Suspense fallback={<div className="h-64 animate-pulse bg-gray-100 rounded" />}>
+              <OrdersChart orders={orders} />
+            </Suspense>
+          </div>
+          <div className="rounded-lg border bg-white p-4">
+            <h2 className="mb-4 font-semibold">По источникам (UTM)</h2>
+            <Suspense fallback={<div className="h-64 animate-pulse bg-gray-100 rounded" />}>
+              <UtmBreakdown orders={orders} />
+            </Suspense>
+          </div>
         </div>
-      </main>
-    </div>
-  );
+
+        {/* Table */}
+        <div className="rounded-lg border bg-white p-4">
+          <h2 className="mb-4 font-semibold">
+            Все заказы <span className="text-muted-foreground font-normal">({orders.length})</span>
+          </h2>
+          <OrdersTable orders={orders} />
+        </div>
+
+      </div>
+    </main>
+  )
+}
+
+function FilterSelect({
+  name, placeholder, options, current,
+}: {
+  name: string; placeholder: string; options: string[]; current?: string
+}) {
+  return (
+    <form>
+      <Select name={name} defaultValue={current ?? 'all'}>
+        <SelectTrigger className="w-40">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{placeholder}</SelectItem>
+          {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </form>
+  )
 }
